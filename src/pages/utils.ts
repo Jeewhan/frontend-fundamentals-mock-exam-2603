@@ -20,7 +20,7 @@ export function validateBookingFilters(startTime: string, endTime: string, atten
   return null;
 }
 
-interface AvailableRoomsFilter {
+export interface BookingFilters {
   date: string;
   startTime: string;
   endTime: string;
@@ -29,7 +29,7 @@ interface AvailableRoomsFilter {
   preferredFloor: number | null;
 }
 
-export function getAvailableRooms(rooms: Room[], reservations: Reservation[], filters: AvailableRoomsFilter): Room[] {
+export function getAvailableRooms(rooms: Room[], reservations: Reservation[], filters: BookingFilters): Room[] {
   const { date, startTime, endTime, attendees, equipment, preferredFloor } = filters;
 
   return rooms

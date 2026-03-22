@@ -2,21 +2,12 @@ import { css } from '@emotion/react';
 import { Spacing, Text, Select } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
 import { EQUIPMENT_LABELS, ALL_EQUIPMENT, TIME_SLOTS } from 'pages/constants';
-import { formatDate } from 'pages/utils';
-
-interface Filters {
-  date: string;
-  startTime: string;
-  endTime: string;
-  attendees: number;
-  equipment: string[];
-  preferredFloor: number | null;
-}
+import { formatDate, type BookingFilters } from 'pages/utils';
 
 interface Props {
-  filters: Filters;
+  filters: BookingFilters;
   floors: number[];
-  onChange: (patch: Partial<Filters>) => void;
+  onChange: (patch: Partial<BookingFilters>) => void;
 }
 
 export function FilterPanel({ filters, floors, onChange }: Props) {

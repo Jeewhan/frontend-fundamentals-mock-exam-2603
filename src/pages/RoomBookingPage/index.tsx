@@ -5,43 +5,49 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Top, Spacing, Border, Button, Text } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
 import { getRooms, getReservations, createReservation } from 'pages/remotes';
-import { formatDate, validateBookingFilters, getAvailableRooms } from 'pages/utils';
+import { formatDate, validateBookingFilters, getAvailableRooms, type BookingFilters } from 'pages/utils';
 import axios from 'axios';
 import { FilterPanel } from './FilterPanel';
 import { AvailableRoomList } from './AvailableRoomList';
+
+function parseFiltersFromParams(searchParams: URLSearchParams): BookingFilters {
+  return {
+    date: searchParams.get('date') || formatDate(new Date()),
+    startTime: searchParams.get('startTime') || '',
+    endTime: searchParams.get('endTime') || '',
+    attendees: Number(searchParams.get('attendees')) || 1,
+    equipment: searchParams.get('equipment') ? searchParams.get('equipment')!.split(',').filter(Boolean) : [],
+    preferredFloor: searchParams.get('floor') ? Number(searchParams.get('floor')) : null,
+  };
+}
+
+function filtersToParams(filters: BookingFilters): Record<string, string> {
+  const params: Record<string, string> = {};
+  if (filters.date) params.date = filters.date;
+  if (filters.startTime) params.startTime = filters.startTime;
+  if (filters.endTime) params.endTime = filters.endTime;
+  if (filters.attendees > 1) params.attendees = String(filters.attendees);
+  if (filters.equipment.length > 0) params.equipment = filters.equipment.join(',');
+  if (filters.preferredFloor !== null) params.floor = String(filters.preferredFloor);
+  return params;
+}
 
 export function RoomBookingPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [date, setDate] = useState(searchParams.get('date') || formatDate(new Date()));
-  const [startTime, setStartTime] = useState(searchParams.get('startTime') || '');
-  const [endTime, setEndTime] = useState(searchParams.get('endTime') || '');
-  const [attendees, setAttendees] = useState(Number(searchParams.get('attendees')) || 1);
-  const [equipment, setEquipment] = useState<string[]>(
-    searchParams.get('equipment') ? searchParams.get('equipment')!.split(',').filter(Boolean) : []
-  );
-  const [preferredFloor, setPreferredFloor] = useState<number | null>(
-    searchParams.get('floor') ? Number(searchParams.get('floor')) : null
-  );
+  const [filters, setFilters] = useState<BookingFilters>(() => parseFiltersFromParams(searchParams));
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // URL 쿼리 파라미터 동기화
   useEffect(() => {
-    const params: Record<string, string> = {};
-    if (date) params.date = date;
-    if (startTime) params.startTime = startTime;
-    if (endTime) params.endTime = endTime;
-    if (attendees > 1) params.attendees = String(attendees);
-    if (equipment.length > 0) params.equipment = equipment.join(',');
-    if (preferredFloor !== null) params.floor = String(preferredFloor);
-    setSearchParams(params, { replace: true });
-  }, [date, startTime, endTime, attendees, equipment, preferredFloor, setSearchParams]);
+    setSearchParams(filtersToParams(filters), { replace: true });
+  }, [filters, setSearchParams]);
 
   const { data: rooms = [] } = useQuery(['rooms'], getRooms);
-  const { data: reservations = [] } = useQuery(['reservations', date], () => getReservations(date), { enabled: !!date });
+  const { data: reservations = [] } = useQuery(['reservations', filters.date], () => getReservations(filters.date), { enabled: !!filters.date });
 
   const createMutation = useMutation(
     (data: Parameters<typeof createReservation>[0]) => createReservation(data),
@@ -53,24 +59,19 @@ export function RoomBookingPage() {
     }
   );
 
-  const handleFilterChange = (patch: Record<string, unknown>) => {
-    if ('date' in patch) setDate(patch.date as string);
-    if ('startTime' in patch) setStartTime(patch.startTime as string);
-    if ('endTime' in patch) setEndTime(patch.endTime as string);
-    if ('attendees' in patch) setAttendees(patch.attendees as number);
-    if ('equipment' in patch) setEquipment(patch.equipment as string[]);
-    if ('preferredFloor' in patch) setPreferredFloor(patch.preferredFloor as number | null);
+  const handleFilterChange = (patch: Partial<BookingFilters>) => {
+    setFilters(prev => ({ ...prev, ...patch }));
     setSelectedRoomId(null);
     setErrorMessage(null);
   };
 
-  const validationError = validateBookingFilters(startTime, endTime, attendees);
-  const hasTimeInputs = startTime !== '' && endTime !== '';
+  const validationError = validateBookingFilters(filters.startTime, filters.endTime, filters.attendees);
+  const hasTimeInputs = filters.startTime !== '' && filters.endTime !== '';
   const isFilterComplete = hasTimeInputs && !validationError;
 
   const floors = [...new Set(rooms.map(r => r.floor))].sort((a, b) => a - b);
   const availableRooms = isFilterComplete
-    ? getAvailableRooms(rooms, reservations, { date, startTime, endTime, attendees, equipment, preferredFloor })
+    ? getAvailableRooms(rooms, reservations, filters)
     : [];
 
   const handleBook = async () => {
@@ -78,7 +79,7 @@ export function RoomBookingPage() {
       setErrorMessage('회의실을 선택해주세요.');
       return;
     }
-    if (!startTime || !endTime) {
+    if (!filters.startTime || !filters.endTime) {
       setErrorMessage('시작 시간과 종료 시간을 선택해주세요.');
       return;
     }
@@ -86,11 +87,11 @@ export function RoomBookingPage() {
     try {
       const result = await createMutation.mutateAsync({
         roomId: selectedRoomId,
-        date,
-        start: startTime,
-        end: endTime,
-        attendees,
-        equipment,
+        date: filters.date,
+        start: filters.startTime,
+        end: filters.endTime,
+        attendees: filters.attendees,
+        equipment: filters.equipment,
       });
 
       if ('ok' in result && result.ok) {
@@ -148,7 +149,7 @@ export function RoomBookingPage() {
       <Spacing size={24} />
 
       <FilterPanel
-        filters={{ date, startTime, endTime, attendees, equipment, preferredFloor }}
+        filters={filters}
         floors={floors}
         onChange={handleFilterChange}
       />

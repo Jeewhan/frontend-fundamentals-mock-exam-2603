@@ -1,5 +1,6 @@
 import type { Room, Reservation, Equipment } from '_tosslib/server/types';
 import { TIMELINE_START } from 'pages/constants';
+import axios from 'axios';
 
 export function formatDate(date: Date): string {
   const y = date.getFullYear();
@@ -27,6 +28,15 @@ export interface BookingFilters {
   attendees: number;
   equipment: Equipment[];
   preferredFloor: number | null;
+}
+
+export function extractErrorMessage(err: unknown, fallback = '예약에 실패했습니다.'): string {
+  if (axios.isAxiosError(err)) {
+    const data = err.response?.data as { message?: string } | undefined;
+    return data?.message ?? fallback;
+  }
+  if (err instanceof Error) return err.message;
+  return fallback;
 }
 
 export function getAvailableRooms(rooms: Room[], reservations: Reservation[], filters: BookingFilters): Room[] {

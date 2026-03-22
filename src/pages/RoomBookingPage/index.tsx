@@ -5,8 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Top, Spacing, Border, Button, Text } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
 import { getRooms, getReservations, createReservation } from 'pages/remotes';
-import { formatDate, validateBookingFilters, getAvailableRooms, type BookingFilters } from 'pages/utils';
-import axios from 'axios';
+import { formatDate, validateBookingFilters, getAvailableRooms, extractErrorMessage, type BookingFilters } from 'pages/utils';
 import { FilterPanel } from './FilterPanel';
 import { AvailableRoomList } from './AvailableRoomList';
 
@@ -85,7 +84,7 @@ export function RoomBookingPage() {
     }
 
     try {
-      const result = await createMutation.mutateAsync({
+      await createMutation.mutateAsync({
         roomId: selectedRoomId,
         date: filters.date,
         start: filters.startTime,
@@ -93,22 +92,9 @@ export function RoomBookingPage() {
         attendees: filters.attendees,
         equipment: filters.equipment,
       });
-
-      if ('ok' in result && result.ok) {
-        navigate('/', { state: { message: '예약이 완료되었습니다!' } });
-        return;
-      }
-
-      const errResult = result as { message?: string };
-      setErrorMessage(errResult.message ?? '예약에 실패했습니다.');
-      setSelectedRoomId(null);
+      navigate('/', { state: { message: '예약이 완료되었습니다!' } });
     } catch (err: unknown) {
-      let serverMessage = '예약에 실패했습니다.';
-      if (axios.isAxiosError(err)) {
-        const data = err.response?.data as { message?: string } | undefined;
-        serverMessage = data?.message ?? serverMessage;
-      }
-      setErrorMessage(serverMessage);
+      setErrorMessage(extractErrorMessage(err));
       setSelectedRoomId(null);
     }
   };

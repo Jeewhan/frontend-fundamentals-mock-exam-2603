@@ -6,31 +6,9 @@ import { Top, Spacing, Border, Button, Text, Select, ListRow } from '_tosslib/co
 import { colors } from '_tosslib/constants/colors';
 import { getRooms, getReservations, createReservation } from 'pages/remotes';
 import type { Room } from '_tosslib/server/types';
+import { EQUIPMENT_LABELS, ALL_EQUIPMENT, TIME_SLOTS } from 'pages/constants';
+import { formatDate } from 'pages/utils';
 import axios from 'axios';
-
-const EQUIPMENT_LABELS: Record<string, string> = {
-  tv: 'TV',
-  whiteboard: '화이트보드',
-  video: '화상장비',
-  speaker: '스피커',
-};
-
-const ALL_EQUIPMENT = ['tv', 'whiteboard', 'video', 'speaker'];
-
-const TIME_SLOTS: string[] = [];
-for (let h = 9; h <= 20; h++) {
-  TIME_SLOTS.push(`${String(h).padStart(2, '0')}:00`);
-  if (h < 20) {
-    TIME_SLOTS.push(`${String(h).padStart(2, '0')}:30`);
-  }
-}
-
-function formatDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
 
 export function RoomBookingPage() {
   const navigate = useNavigate();

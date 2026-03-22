@@ -2,8 +2,9 @@ import { css } from '@emotion/react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Top, Spacing, Border, Button, Text } from '_tosslib/components';
+import { Top, Spacing, Border, Button } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
+import { MessageBanner } from 'pages/components/MessageBanner';
 import { getRooms, getReservations, createReservation } from 'pages/remotes';
 import { validateBookingFilters, getAvailableRooms, extractErrorMessage } from 'pages/utils';
 import { FilterPanel } from './FilterPanel';
@@ -37,12 +38,10 @@ export function RoomBookingPage() {
     setErrorMessage(null);
   };
 
-  const validationError = validateBookingFilters(filters.startTime, filters.endTime, filters.attendees);
-  const hasTimeInputs = filters.startTime !== '' && filters.endTime !== '';
-  const isFilterComplete = hasTimeInputs && !validationError;
+  const validation = validateBookingFilters(filters);
 
   const floors = [...new Set(rooms.map(r => r.floor))].sort((a, b) => a - b);
-  const availableRooms = isFilterComplete
+  const availableRooms = validation.status === 'valid'
     ? getAvailableRooms(rooms, reservations, filters)
     : [];
 
@@ -94,14 +93,7 @@ export function RoomBookingPage() {
       {errorMessage && (
         <div css={css`padding: 0 24px;`}>
           <Spacing size={12} />
-          <div
-            css={css`
-              padding: 10px 14px; border-radius: 10px; background: ${colors.red50};
-              display: flex; align-items: center; gap: 8px;
-            `}
-          >
-            <Text typography="t7" fontWeight="medium" color={colors.red500}>{errorMessage}</Text>
-          </div>
+          <MessageBanner type="error">{errorMessage}</MessageBanner>
         </div>
       )}
 
@@ -113,10 +105,10 @@ export function RoomBookingPage() {
         onChange={handleFilterChange}
       />
 
-      {validationError && (
+      {validation.status === 'invalid' && (
         <div css={css`padding: 0 24px;`}>
           <Spacing size={8} />
-          <span css={css`color: ${colors.red500}; font-size: 14px;`} role="alert">{validationError}</span>
+          <span css={css`color: ${colors.red500}; font-size: 14px;`} role="alert">{validation.message}</span>
         </div>
       )}
 
@@ -124,7 +116,7 @@ export function RoomBookingPage() {
       <Border size={8} />
       <Spacing size={24} />
 
-      {isFilterComplete && (
+      {validation.status === 'valid' && (
         <div css={css`padding: 0 24px;`}>
           <AvailableRoomList
             rooms={availableRooms}

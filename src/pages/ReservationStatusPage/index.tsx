@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Top, Spacing, Border, Button, Text } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
+import { MessageBanner } from 'pages/components/MessageBanner';
 import { getRooms, getReservations, getMyReservations, cancelReservation } from 'pages/remotes';
 import { formatDate } from 'pages/utils';
 import { Timeline } from './Timeline';
@@ -84,21 +85,7 @@ export function ReservationStatusPage() {
       {/* 메시지 배너 */}
       {message && (
         <div css={css`padding: 0 24px;`}>
-          <div
-            css={css`
-              padding: 10px 14px; border-radius: 10px;
-              background: ${message.type === 'success' ? colors.blue50 : colors.red50};
-              display: flex; align-items: center; gap: 8px;
-            `}
-          >
-            <Text
-              typography="t7"
-              fontWeight="medium"
-              color={message.type === 'success' ? colors.blue600 : colors.red500}
-            >
-              {message.text}
-            </Text>
-          </div>
+          <MessageBanner type={message.type}>{message.text}</MessageBanner>
           <Spacing size={12} />
         </div>
       )}

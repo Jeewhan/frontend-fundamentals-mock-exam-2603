@@ -1,49 +1,22 @@
 import { css } from '@emotion/react';
-import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Top, Spacing, Border, Button, Text } from '_tosslib/components';
 import { colors } from '_tosslib/constants/colors';
 import { getRooms, getReservations, createReservation } from 'pages/remotes';
-import { formatDate, validateBookingFilters, getAvailableRooms, extractErrorMessage, type BookingFilters } from 'pages/utils';
+import { validateBookingFilters, getAvailableRooms, extractErrorMessage } from 'pages/utils';
 import { FilterPanel } from './FilterPanel';
 import { AvailableRoomList } from './AvailableRoomList';
-
-function parseFiltersFromParams(searchParams: URLSearchParams): BookingFilters {
-  return {
-    date: searchParams.get('date') || formatDate(new Date()),
-    startTime: searchParams.get('startTime') || '',
-    endTime: searchParams.get('endTime') || '',
-    attendees: Number(searchParams.get('attendees')) || 1,
-    equipment: searchParams.get('equipment') ? searchParams.get('equipment')!.split(',').filter(Boolean) : [],
-    preferredFloor: searchParams.get('floor') ? Number(searchParams.get('floor')) : null,
-  };
-}
-
-function filtersToParams(filters: BookingFilters): Record<string, string> {
-  const params: Record<string, string> = {};
-  if (filters.date) params.date = filters.date;
-  if (filters.startTime) params.startTime = filters.startTime;
-  if (filters.endTime) params.endTime = filters.endTime;
-  if (filters.attendees > 1) params.attendees = String(filters.attendees);
-  if (filters.equipment.length > 0) params.equipment = filters.equipment.join(',');
-  if (filters.preferredFloor !== null) params.floor = String(filters.preferredFloor);
-  return params;
-}
+import { useBookingFilters } from './useBookingFilters';
 
 export function RoomBookingPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [filters, setFilters] = useState<BookingFilters>(() => parseFiltersFromParams(searchParams));
+  const [filters, updateFilters] = useBookingFilters();
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // URL 쿼리 파라미터 동기화
-  useEffect(() => {
-    setSearchParams(filtersToParams(filters), { replace: true });
-  }, [filters, setSearchParams]);
 
   const { data: rooms = [] } = useQuery(['rooms'], getRooms);
   const { data: reservations = [] } = useQuery(['reservations', filters.date], () => getReservations(filters.date), { enabled: !!filters.date });
@@ -58,8 +31,8 @@ export function RoomBookingPage() {
     }
   );
 
-  const handleFilterChange = (patch: Partial<BookingFilters>) => {
-    setFilters(prev => ({ ...prev, ...patch }));
+  const handleFilterChange = (patch: Parameters<typeof updateFilters>[0]) => {
+    updateFilters(patch);
     setSelectedRoomId(null);
     setErrorMessage(null);
   };

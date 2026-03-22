@@ -7,7 +7,7 @@ import { colors } from '_tosslib/constants/colors';
 import { getRooms, getReservations, createReservation } from 'pages/remotes';
 import type { Room } from '_tosslib/server/types';
 import { EQUIPMENT_LABELS, ALL_EQUIPMENT, TIME_SLOTS } from 'pages/constants';
-import { formatDate } from 'pages/utils';
+import { formatDate, validateBookingFilters, getAvailableRooms } from 'pages/utils';
 import axios from 'axios';
 
 export function RoomBookingPage() {
@@ -59,37 +59,13 @@ export function RoomBookingPage() {
     setErrorMessage(null);
   };
 
-  // 입력 검증
-  let validationError: string | null = null;
+  const validationError = validateBookingFilters(startTime, endTime, attendees);
   const hasTimeInputs = startTime !== '' && endTime !== '';
-  if (hasTimeInputs) {
-    if (endTime <= startTime) {
-      validationError = '종료 시간은 시작 시간보다 늦어야 합니다.';
-    } else if (attendees < 1) {
-      validationError = '참석 인원은 1명 이상이어야 합니다.';
-    }
-  }
   const isFilterComplete = hasTimeInputs && !validationError;
 
-  // 필터링
   const floors = [...new Set(rooms.map(r => r.floor))].sort((a, b) => a - b);
-
   const availableRooms = isFilterComplete
-    ? rooms
-        .filter((room) => {
-          if (room.capacity < attendees) return false;
-          if (!equipment.every(eq => room.equipment.includes(eq))) return false;
-          if (preferredFloor !== null && room.floor !== preferredFloor) return false;
-          const hasConflict = reservations.some(
-            r => r.roomId === room.id && r.date === date && r.start < endTime && r.end > startTime
-          );
-          if (hasConflict) return false;
-          return true;
-        })
-        .sort((a, b) => {
-          if (a.floor !== b.floor) return a.floor - b.floor;
-          return a.name.localeCompare(b.name);
-        })
+    ? getAvailableRooms(rooms, reservations, { date, startTime, endTime, attendees, equipment, preferredFloor })
     : [];
 
   const handleBook = async () => {

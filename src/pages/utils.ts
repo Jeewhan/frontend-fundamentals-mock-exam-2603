@@ -14,11 +14,16 @@ export function timeToMinutes(time: string): number {
   return (h - TIMELINE_START) * 60 + m;
 }
 
-export function validateBookingFilters(startTime: string, endTime: string, attendees: number): string | null {
-  if (startTime === '' || endTime === '') return null;
-  if (endTime <= startTime) return '종료 시간은 시작 시간보다 늦어야 합니다.';
-  if (attendees < 1) return '참석 인원은 1명 이상이어야 합니다.';
-  return null;
+export type FilterValidation =
+  | { status: 'incomplete' }
+  | { status: 'invalid'; message: string }
+  | { status: 'valid' };
+
+export function validateBookingFilters(filters: BookingFilters): FilterValidation {
+  if (filters.startTime === '' || filters.endTime === '') return { status: 'incomplete' };
+  if (filters.endTime <= filters.startTime) return { status: 'invalid', message: '종료 시간은 시작 시간보다 늦어야 합니다.' };
+  if (filters.attendees < 1) return { status: 'invalid', message: '참석 인원은 1명 이상이어야 합니다.' };
+  return { status: 'valid' };
 }
 
 export interface BookingFilters {
